@@ -69,3 +69,14 @@ The system captures facial images and uses the pre-trained models to extract and
     -   *Strain*: 500 - 2,000 users (may increase initial load time).
     -   *Limit*: > 2,000 users may cause significant lag on client devices as every face descriptor is downloaded and matched locally.
 -   **Images**: Actual images are **NOT** stored. Only mathematical face descriptors are saved to the database to ensure privacy.
+
+## About
+
+This Face Attendance System is a lightweight, privacy-focused biometric attendance solution designed for small to medium-sized organizations. It provides real-time facial recognition directly in the browser without storing images, ensuring user privacy while maintaining accurate attendance records. The system is easy to deploy and requires minimal infrastructure, making it ideal for schools, offices, and events.
+
+**Key Features:**
+- Real-time browser-based facial recognition
+- Privacy-preserving (no image storage)
+- Lightweight and fast performance
+- SQLite database for local data management
+- Simple setup and deployment
