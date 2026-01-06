@@ -14,6 +14,7 @@ function Attendance() {
     const streamRef = useRef();
     const matcherRef = useRef(null);
     const usersMapRef = useRef({});
+    const usersRef = useRef([]); // Critical: store users for access in handleVideoPlay
     const lastLogRef = useRef({});
 
     useEffect(() => {
@@ -31,18 +32,17 @@ function Attendance() {
                 setSession(activeSession);
 
                 if (users.length > 0) {
+                    usersRef.current = users;
                     const labeledDescriptors = users.map(user => {
                         usersMapRef.current[user.name] = user.id;
 
                         // Parse descriptors: could be single [num] or cumulative [[num],[num]]
-                        // Support both formats for safety
-                        const descriptorsArray = Array.isArray(user.descriptor[0])
-                            ? user.descriptor.map(d => new Float32Array(Object.values(d)))
-                            : [new Float32Array(Object.values(user.descriptor))];
+                        const ds = Array.isArray(user.descriptor[0]) ? user.descriptor : [user.descriptor];
+                        const floatDescriptors = ds.map(d => new Float32Array(d));
 
-                        return new faceapi.LabeledFaceDescriptors(user.name, descriptorsArray);
+                        return new faceapi.LabeledFaceDescriptors(user.name, floatDescriptors);
                     });
-                    // Threshold set to 0.45 to support variations like glasses/hats
+                    // Threshold set to 0.45 to support variations (glasses/hats)
                     matcherRef.current = new faceapi.FaceMatcher(labeledDescriptors, 0.45);
                 }
 
@@ -136,11 +136,11 @@ function Attendance() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-                if (users.length > 0 && !matcherRef.current) {
-                    // Re-initialize matcher if missing
-                    const labeledDescriptors = users.map(user => {
+                if (usersRef.current.length > 0 && !matcherRef.current) {
+                    // Re-initialize matcher if missing using the ref
+                    const labeledDescriptors = usersRef.current.map(user => {
                         const ds = Array.isArray(user.descriptor[0]) ? user.descriptor : [user.descriptor];
-                        return new faceapi.LabeledFaceDescriptors(user.name, ds.map(d => new Float32Array(Object.values(d))));
+                        return new faceapi.LabeledFaceDescriptors(user.name, ds.map(d => new Float32Array(d)));
                     });
                     matcherRef.current = new faceapi.FaceMatcher(labeledDescriptors, 0.45);
                 }

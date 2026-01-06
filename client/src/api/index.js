@@ -6,6 +6,14 @@ export const api = {
             const res = await fetch(`${BASE_URL}/users${search ? `?search=${search}` : ''}`);
             return res.json();
         },
+        register: async (userData) => {
+            const res = await fetch(`${BASE_URL}/users/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+            return res.json();
+        },
         delete: async (id) => {
             const res = await fetch(`${BASE_URL}/users/${id}`, { method: 'DELETE' });
             return res.json();
