@@ -76,30 +76,34 @@ function Register() {
                     const ctx = canvasRef.current.getContext('2d');
                     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-                    // Custom drawing for more premium feel with Safari compatibility
+                    // Custom drawing for more premium feel
                     resizedDetections.forEach(detection => {
                         const { x, y, width, height } = detection.detection.box;
-                        ctx.strokeStyle = 'var(--primary)';
+                        const pulse = Math.sin(Date.now() / 150) * 0.15 + 0.85;
+                        const mainColor = '#3b82f6'; // Neon Blue
+
+                        ctx.save();
+                        ctx.strokeStyle = mainColor;
                         ctx.lineWidth = 3;
-                        if (ctx.roundRect) {
-                            ctx.roundRect(x, y, width, height, 8);
-                        } else {
-                            // Fallback for older Safari
-                            const r = 8;
-                            ctx.beginPath();
-                            ctx.moveTo(x + r, y);
-                            ctx.arcTo(x + width, y, x + width, y + height, r);
-                            ctx.arcTo(x + width, y + height, x, y + height, r);
-                            ctx.arcTo(x, y + height, x, y, r);
-                            ctx.arcTo(x, y, x + width, y, r);
-                            ctx.closePath();
-                        }
+                        ctx.globalAlpha = pulse;
+
+                        // 1. High-Tech Corner Brackets
+                        const len = Math.min(width, height) * 0.2;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y + len); ctx.lineTo(x, y); ctx.lineTo(x + len, y);
+                        ctx.moveTo(x + width - len, y); ctx.lineTo(x + width, y); ctx.lineTo(x + width, y + len);
+                        ctx.moveTo(x + width, y + height - len); ctx.lineTo(x + width, y + height); ctx.lineTo(x + width - len, y + height);
+                        ctx.moveTo(x + len, y + height); ctx.lineTo(x, y + height); ctx.lineTo(x, y + height - len);
                         ctx.stroke();
 
-                        // Corner decorations
-                        ctx.fillStyle = 'var(--primary)';
-                        ctx.fillRect(x - 2, y - 2, 15, 4);
-                        ctx.fillRect(x - 2, y - 2, 4, 15);
+                        // 2. Neon Glow
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = mainColor;
+                        ctx.globalAlpha = pulse * 0.3;
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x, y, width, height);
+
+                        ctx.restore();
                     });
                 }
 

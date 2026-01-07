@@ -150,35 +150,47 @@ function Attendance() {
                 results.forEach((result, i) => {
                     const box = resizedDetections[i].detection.box;
                     const isMatched = result.label !== 'unknown';
+                    const { x, y, width, height } = box;
 
-                    // High-Tech custom drawing with Safari compatibility fallback
-                    ctx.strokeStyle = isMatched ? 'var(--success)' : 'var(--primary)';
+                    // Neon Pulse Calculation (0.7 to 1.0 opacity)
+                    const pulse = isMatched ? 1 : (Math.sin(Date.now() / 150) * 0.15 + 0.85);
+                    const mainColor = isMatched ? '#10b981' : '#3b82f6'; // Success Green or Cyber Blue
+
+                    ctx.save();
+                    ctx.strokeStyle = mainColor;
                     ctx.lineWidth = 3;
+                    ctx.globalAlpha = pulse;
+
+                    // 1. High-Tech Corner Brackets
+                    const len = Math.min(width, height) * 0.2;
                     ctx.beginPath();
-                    if (ctx.roundRect) {
-                        ctx.roundRect(box.x, box.y, box.width, box.height, 10);
-                    } else {
-                        // Fallback for older Safari
-                        const r = 10;
-                        ctx.moveTo(box.x + r, box.y);
-                        ctx.arcTo(box.x + box.width, box.y, box.x + box.width, box.y + box.height, r);
-                        ctx.arcTo(box.x + box.width, box.y + box.height, box.x, box.y + box.height, r);
-                        ctx.arcTo(box.x, box.y + box.height, box.x, box.y, r);
-                        ctx.arcTo(box.x, box.y, box.x + box.width, box.y, r);
-                        ctx.closePath();
-                    }
+                    // Top Left
+                    ctx.moveTo(x, y + len); ctx.lineTo(x, y); ctx.lineTo(x + len, y);
+                    // Top Right
+                    ctx.moveTo(x + width - len, y); ctx.lineTo(x + width, y); ctx.lineTo(x + width, y + len);
+                    // Bottom Right
+                    ctx.moveTo(x + width, y + height - len); ctx.lineTo(x + width, y + height); ctx.lineTo(x + width - len, y + height);
+                    // Bottom Left
+                    ctx.moveTo(x + len, y + height); ctx.lineTo(x, y + height); ctx.lineTo(x, y + height - len);
                     ctx.stroke();
 
-                    // Label Background
-                    ctx.fillStyle = isMatched ? 'var(--success)' : 'var(--primary)';
-                    ctx.font = '700 14px Inter';
-                    const text = isMatched ? result.label : 'Scanning...';
-                    const textWidth = ctx.measureText(text).width;
-                    ctx.fillRect(box.x, box.y - 25, textWidth + 16, 25);
+                    // 2. Subtle Outer Glow
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = mainColor;
+                    ctx.globalAlpha = pulse * 0.4;
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, width, height);
 
-                    // Label Text
+                    // 3. Label Design
+                    ctx.restore();
+                    ctx.fillStyle = mainColor;
+                    ctx.font = '700 14px Inter';
+                    const text = isMatched ? result.label : 'SCANNING_BIO...';
+                    const textWidth = ctx.measureText(text).width;
+
+                    ctx.fillRect(x, y - 30, textWidth + 16, 25);
                     ctx.fillStyle = 'white';
-                    ctx.fillText(text, box.x + 8, box.y - 8);
+                    ctx.fillText(text, x + 8, y - 13);
 
                     if (isMatched) {
                         logAttendance(result.label, box);
