@@ -6,6 +6,7 @@ import Attendance from './pages/Attendance';
 import Admin from './pages/Admin';
 import AdminLogin from './pages/AdminLogin';
 import Home from './pages/Home';
+import LiquidBackground from './components/LiquidBackground';
 import './index.css';
 
 // Protective wrapper for Admin routes
@@ -28,11 +29,9 @@ const NavLink = ({ to, icon: Icon, label }) => {
         alignItems: 'center',
         gap: '8px',
         padding: '0.6rem 1.25rem',
-        borderRadius: '12px',
+        borderRadius: '50px',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-        background: isActive ? 'var(--primary-light)' : 'transparent',
-        fontWeight: isActive ? 800 : 600,
+        // Colors handled by css class 'nav-links a' but inline overrides if needed
         textDecoration: 'none',
         fontSize: '0.95rem'
       }}
@@ -47,33 +46,17 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <nav className="navbar" style={{
-          padding: '1rem 5%',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          background: 'rgba(255, 255, 255, 0.8)',
-          borderBottom: '1px solid var(--border-light)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000
-        }}>
-          <Link to="/" className="nav-brand" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            textDecoration: 'none',
-            color: 'var(--text-main)'
-          }}>
-            <div style={{ background: 'var(--primary)', color: 'white', padding: '8px', borderRadius: '10px' }}>
+        <LiquidBackground />
+
+        <nav className="navbar">
+          <Link to="/" className="nav-brand">
+            <div style={{ background: 'var(--primary)', color: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 0 15px var(--primary-glow)' }}>
               <ScanFace size={24} />
             </div>
-            <span style={{ fontWeight: 900, fontSize: '1.5rem', letterSpacing: '-1.5px', color: 'var(--primary)' }}>FaceAttend</span>
+            <span>FaceAttend</span>
           </Link>
 
-          <div className="nav-links" style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="nav-links">
             <NavLink to="/" icon={HomeIcon} label="Home" />
             <NavLink to="/register" icon={UserPlus} label="Enroll" />
             <NavLink to="/attendance" icon={Camera} label="Scanner" />

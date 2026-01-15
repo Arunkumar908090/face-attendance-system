@@ -6,11 +6,11 @@ function Home() {
     return (
         <div className="page-container centered-layout">
             <div className="animate-up" style={{ maxWidth: '800px', width: '100%' }}>
-                <div style={{ display: 'inline-flex', padding: '0.75rem 1.5rem', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '100px', fontSize: '0.85rem', fontWeight: 700, marginBottom: '2.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '2.5rem', padding: '0.75rem 1.5rem', borderRadius: '100px' }}>
                     <ScanFace size={16} style={{ marginRight: '8px' }} /> Biometric Identification Grid
                 </div>
 
-                <h1 style={{ fontSize: '4.5rem', fontWeight: 900, lineHeight: 1.1, marginBottom: '2.5rem', color: 'var(--text-main)', letterSpacing: '-3px' }}>
+                <h1 style={{ fontSize: '4.5rem', fontWeight: 900, lineHeight: 1.1, marginBottom: '2.5rem', color: 'var(--text-main)', letterSpacing: '-2px' }}>
                     Automated Verification via <br /> <span className="text-primary">Facial Scanning</span>
                 </h1>
 
@@ -19,27 +19,27 @@ function Home() {
                 </p>
 
                 <div className="flex-center button-gutter" style={{ flexWrap: 'wrap', marginBottom: '8rem' }}>
-                    <Link to="/register" className="btn btn-primary" style={{ padding: '1.25rem 2.5rem', fontSize: '1.15rem', borderRadius: '14px' }}>
+                    <Link to="/register" className="btn btn-primary" style={{ padding: '1.25rem 2.5rem', fontSize: '1.15rem', borderRadius: '50px' }}>
                         <UserPlus size={22} /> Student Enrollment
                     </Link>
-                    <Link to="/attendance" className="btn btn-secondary" style={{ padding: '1.25rem 2.5rem', fontSize: '1.15rem', borderRadius: '14px' }}>
+                    <Link to="/attendance" className="btn btn-secondary" style={{ padding: '1.25rem 2.5rem', fontSize: '1.15rem', borderRadius: '50px' }}>
                         <Camera size={22} /> Launch Scanner
                     </Link>
                 </div>
 
                 <div className="section-gutter" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '3rem' }}>
                     <div className="card" style={{ textAlign: 'left', padding: '2rem' }}>
-                        <div style={{ color: 'var(--primary)', marginBottom: '1.25rem' }}><ScanFace size={32} /></div>
+                        <div style={{ color: 'var(--primary)', marginBottom: '1.25rem', background: 'rgba(37, 99, 235, 0.1)', width: 'fit-content', padding: '1rem', borderRadius: '50%' }}><ScanFace size={32} /></div>
                         <h3 style={{ marginBottom: '0.75rem', fontWeight: 800 }}>Biometric Integrity</h3>
                         <p className="text-muted" style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>All facial data is hashed and stored locally. Privacy is baked into the architecture.</p>
                     </div>
                     <div className="card" style={{ textAlign: 'left', padding: '2rem' }}>
-                        <div style={{ color: 'var(--primary)', marginBottom: '1.25rem' }}><Camera size={32} /></div>
+                        <div style={{ color: 'var(--secondary)', marginBottom: '1.25rem', background: 'rgba(14, 165, 233, 0.1)', width: 'fit-content', padding: '1rem', borderRadius: '50%' }}><Camera size={32} /></div>
                         <h3 style={{ marginBottom: '0.75rem', fontWeight: 800 }}>Neural Processing</h3>
                         <p className="text-muted" style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>Real-time verification using SSD MobileNet V1 for maximum reliability.</p>
                     </div>
                     <div className="card" style={{ textAlign: 'left', padding: '2rem' }}>
-                        <div style={{ color: 'var(--primary)', marginBottom: '1.25rem' }}><Settings size={32} /></div>
+                        <div style={{ color: 'var(--accent)', marginBottom: '1.25rem', background: 'rgba(99, 102, 241, 0.1)', width: 'fit-content', padding: '1rem', borderRadius: '50%' }}><Settings size={32} /></div>
                         <h3 style={{ marginBottom: '0.75rem', fontWeight: 800 }}>Matrix Reporting</h3>
                         <p className="text-muted" style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>Automated attendance matrices with session timers and student management.</p>
                     </div>

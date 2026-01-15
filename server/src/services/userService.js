@@ -1,11 +1,12 @@
 const db = require('../config/database');
 
 const registerUser = (user) => {
-    const { name, matric_no, level, department, course, photo, descriptor, section } = user;
+    const { name, matric_no, level, department, course, photo, descriptor, section, classIds } = user;
 
     // Check if user already exists by matric_no
     const existingUser = db.prepare('SELECT id, descriptor FROM users WHERE matric_no = ?').get(matric_no);
 
+    let userId;
     if (existingUser) {
         let descriptors = [];
         try {
@@ -16,36 +17,70 @@ const registerUser = (user) => {
             descriptors = [];
         }
 
-        // Append new descriptor if it's not already a duplicate (basic check)
-        descriptors.push(descriptor);
+        // Append new descriptors
+        if (Array.isArray(descriptor) && Array.isArray(descriptor[0])) {
+            // It's an array of embeddings
+            descriptors.push(...descriptor);
+        } else {
+            // It's a single embedding
+            descriptors.push(descriptor);
+        }
 
         // Keep only last 5 descriptors to prevent bloat but maintain accuracy
         if (descriptors.length > 5) descriptors.shift();
 
         const stmt = db.prepare('UPDATE users SET name = ?, level = ?, department = ?, course = ?, photo = ?, descriptor = ?, section = ? WHERE id = ?');
         stmt.run(name, level, department, course, photo, JSON.stringify(descriptors), section, existingUser.id);
-        return { userId: existingUser.id, created: false };
+        userId = existingUser.id;
     } else {
-        // New user: store as array of arrays [[descriptor]]
+        // New user: store as array of arrays. 
+        // If descriptor is already an array of arrays (from multi-upload), use it.
+        // If it's a single descriptor array, wrap it.
+        const initialDescriptors = (Array.isArray(descriptor) && Array.isArray(descriptor[0])) ? descriptor : [descriptor];
+
         const stmt = db.prepare('INSERT INTO users (name, matric_no, level, department, course, photo, descriptor, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        const info = stmt.run(name, matric_no, level, department, course, photo, JSON.stringify([descriptor]), section);
-        return { userId: info.lastInsertRowid, created: true };
+        const info = stmt.run(name, matric_no, level, department, course, photo, JSON.stringify(initialDescriptors), section);
+        userId = info.lastInsertRowid;
     }
+
+    // Handle Class Enrollment
+    if (classIds && Array.isArray(classIds)) {
+        // Remove existing enrollments to be safe (or just ignore constraint errors)
+        // ideally we might want to be additive, but for now let's assume registration sets the state
+        // For simplicity in this flow, we will INSERT OR IGNORE
+        const insertClass = db.prepare('INSERT OR IGNORE INTO user_classes (user_id, class_id) VALUES (?, ?)');
+        classIds.forEach(cId => {
+            try {
+                insertClass.run(userId, cId);
+            } catch (e) { /* ignore */ }
+        });
+    }
+
+    return { userId, created: !existingUser };
 };
 
 const getAllUsers = (search, sort) => {
-    let query = "SELECT id, name, matric_no, level, department, course, photo, descriptor, section, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) as created_at FROM users";
+    let query = `
+        SELECT u.id, u.name, u.matric_no, u.level, u.department, u.course, u.photo, u.descriptor, u.section, 
+        strftime('%Y-%m-%dT%H:%M:%SZ', u.created_at) as created_at,
+        GROUP_CONCAT(c.code, ', ') as enrolled_classes
+        FROM users u
+        LEFT JOIN user_classes uc ON u.id = uc.user_id
+        LEFT JOIN classes c ON uc.class_id = c.id
+    `;
     const params = [];
 
     if (search) {
-        query += ' WHERE name LIKE ? OR matric_no LIKE ?';
+        query += ' WHERE u.name LIKE ? OR u.matric_no LIKE ?';
         params.push(`%${search}%`, `%${search}%`);
     }
 
+    query += ' GROUP BY u.id';
+
     if (sort === 'matric') {
-        query += ' ORDER BY matric_no ASC';
+        query += ' ORDER BY u.matric_no ASC';
     } else {
-        query += ' ORDER BY name ASC';
+        query += ' ORDER BY u.name ASC';
     }
 
     const stmt = db.prepare(query);
@@ -55,6 +90,7 @@ const getAllUsers = (search, sort) => {
 const deleteUser = (id) => {
     // Delete attendance first to satisfy foreign key constraints (or logical cleanup)
     db.prepare('DELETE FROM attendance WHERE user_id = ?').run(id);
+    db.prepare('DELETE FROM user_classes WHERE user_id = ?').run(id);
     const stmt = db.prepare('DELETE FROM users WHERE id = ?');
     return stmt.run(id);
 };

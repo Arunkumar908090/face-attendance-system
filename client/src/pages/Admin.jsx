@@ -10,7 +10,8 @@ import {
     Download,
     Trash2,
     ShieldCheck,
-    CloudOff
+    CloudOff,
+    BookOpen
 } from 'lucide-react';
 import { api } from '../api';
 import UserTable from '../features/admin/UserTable';
@@ -18,6 +19,7 @@ import AttendanceLogs from '../features/admin/AttendanceLogs';
 import SessionManager from '../features/admin/SessionManager';
 import SessionStatsModal from '../features/admin/SessionStatsModal';
 import UserDetailModal from '../features/admin/UserDetailModal';
+import ClassManager from '../features/admin/ClassManager';
 
 function Admin() {
     const [users, setUsers] = useState([]);
@@ -80,16 +82,40 @@ function Admin() {
     };
 
     const fetchSessionHistory = async () => {
-        const data = await api.sessions.getHistory();
-        setSessionHistory(data);
+        try {
+            const data = await api.sessions.getHistory();
+            if (Array.isArray(data)) {
+                setSessionHistory(data);
+            } else {
+                console.error("Invalid session history format:", data);
+                setSessionHistory([]);
+            }
+        } catch (error) {
+            console.error("Failed to fetch session history:", error);
+            setSessionHistory([]);
+        }
     };
 
-    const handleCreateSession = async (type) => {
-        if (!newSessionName) return alert("Please specify a session name for tracking.");
-        await api.sessions.create(newSessionName, type, parseInt(newSessionDuration) || 0);
-        setNewSessionName('');
-        fetchActiveSession();
-        if (activeTab === 'sessions') fetchSessionHistory();
+    const handleCreateSession = async (type, classId) => {
+        if (!newSessionName) {
+            alert("Please specify a session name for tracking.");
+            return { error: 'Name required' };
+        }
+        try {
+            const res = await api.sessions.create(newSessionName, type, parseInt(newSessionDuration) || 0, classId);
+            if (res.error) {
+                alert(res.error);
+                return res;
+            }
+            setNewSessionName('');
+            await fetchActiveSession();
+            if (activeTab === 'sessions') fetchSessionHistory();
+            return res;
+        } catch (e) {
+            console.error(e);
+            alert("Failed to initiate session.");
+            return { error: e.message };
+        }
     };
 
     const handleToggleSessionType = async (id) => {
@@ -147,12 +173,13 @@ function Admin() {
                     </div>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1px' }}>Management Console</h2>
-                        {activeSession ? (
+                        {activeSession && activeSession.name ? (
                             <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
                                 <ShieldCheck size={14} className="text-success" />
                                 <span style={{ fontWeight: 600, color: 'var(--success)' }}>Operational:</span>
                                 <span style={{ fontWeight: 700 }}>{activeSession.name}</span>
-                                <span className="text-muted">({activeSession.type.toUpperCase()})</span>
+                                {activeSession.class_code && <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>{activeSession.class_code}</span>}
+                                {activeSession.type && <span className="text-muted">({activeSession.type.toUpperCase()})</span>}
                             </div>
                         ) : (
                             <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
@@ -167,7 +194,8 @@ function Admin() {
                     {[
                         { id: 'logs', label: 'Attendance', icon: <History size={16} /> },
                         { id: 'users', label: 'Database', icon: <Users size={16} /> },
-                        { id: 'sessions', label: 'Sessions', icon: <Settings2 size={16} /> }
+                        { id: 'sessions', label: 'Sessions', icon: <Settings2 size={16} /> },
+                        { id: 'classes', label: 'Classes', icon: <BookOpen size={16} /> }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -244,6 +272,10 @@ function Admin() {
                         onGetStats={handleGetStats}
                         onExportMatrix={handleExportMatrix}
                     />
+                )}
+
+                {activeTab === 'classes' && (
+                    <ClassManager />
                 )}
             </div>
 

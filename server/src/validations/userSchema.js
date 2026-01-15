@@ -7,8 +7,9 @@ const registerSchema = Joi.object({
     department: Joi.string().optional().allow(''),
     course: Joi.string().optional().allow(''),
     photo: Joi.string().optional().allow(''),
-    descriptor: Joi.array().items(Joi.number()).required(),
-    section: Joi.string().optional().allow('')
+    descriptor: Joi.array().items(Joi.number()).optional(),
+    section: Joi.string().optional().allow(''),
+    classIds: Joi.array().items(Joi.string(), Joi.number()).optional()
 });
 
 module.exports = { registerSchema };

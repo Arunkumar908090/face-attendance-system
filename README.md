@@ -1,43 +1,31 @@
 # Face Attendance System
 
-A biometric attendance tracking application that leverages facial recognition technology to securely log user attendance. This system consists of a React-based frontend for capturing facial data and an Express backend for managing attendance records and user profiles.
+A high-precision biometric attendance application powered by **ArcFace (InsightFace)** and **MediaPipe**. This system features a React-based client for image capture and a robust Node.js backend for secure facial recognition and attendance tracking.
 
 ## Technologies Used
 
--   **Frontend**: React (Vite), face-api.js for browser-based facial recognition.
--   **Backend**: Node.js, Express.
+-   **Frontend**: React (Vite) - Serves as a capture interface.
+-   **Backend**: Node.js, Express, `onnxruntime-node`.
+-   **Biometrics**:
+    -   **Detection**: Google MediaPipe (Face Detection & Landmarks).
+    -   **Recognition**: ArcFace (ResNet50 ONNX) - 99.8% accuracy on LFW.
+    -   **Processing**: Sharp (High-performance image manipulation).
 -   **Database**: SQLite (via `better-sqlite3`).
 
-## Facial Recognition Models
+## Facial Recognition Pipeline
 
-This project utilizes advanced pre-trained models from the `face-api.js` library, located in `client/public/models`. These models are essential for the high-accuracy biometric verification process:
-
-*   **`ssd_mobilenetv1` (SSD MobileNet V1)**: A high-accuracy face detection model based on the Single Shot Multibox Detector (SSD) architecture with a MobileNet V1 backbone. It offers superior detection reliability compared to lightweight alternatives, especially in varying lighting conditions.
-*   **`face_landmark_68` (68-Point CNN)**: A lightweight Convolutional Neural Network (CNN) that detects 68 specific points on a face (jawline, eyebrows, nose, etc.). These landmarks are critical for face alignment, ensuring the face is properly oriented before recognition.
-*   **`face_recognition_model` (ResNet-34)**: A deep learning model based on the **ResNet-34** architecture. It computes a unique 128-dimensional descriptor (embedding) for each face. This robust architecture ensures high accuracy in distinguishing individuals.
-
-## How it works
-
-The system captures facial images and uses the pre-trained models to extract and identify unique facial features. Instead of storing photos, it converts the face into a mathematical descriptor (a list of numbers representing facial features) and saves only that descriptor in the attendance.db SQLite database. This approach ensures privacy while maintaining high-speed local verification.
+The system processes biometrics securely on the server:
+1.  **Capture**: Client captures a high-quality image via webcam.
+2.  **Detection**: Server uses **MediaPipe** (or BlazeFace) to locate the face and 6 facial landmarks.
+3.  **Alignment**: Face is cropped and aligned to a standard 112x112 pixel grid.
+4.  **Embedding**: **ArcFace** generates a 512-dimensional vector embedding.
+5.  **Matching**: Server computes Cosine Similarity against the registered user database (Threshold: 0.45).
 
 ## Installation and Setup
 
-### Client (Frontend)
+### 1. Server (Backend)
 
-1.  Navigate to the client directory:
-    ```bash
-    cd client
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the development server:
-    ```bash
-    npm run dev
-    ```
-
-### Server (Backend)
+The backend handles all recognition logic.
 
 1.  Navigate to the server directory:
     ```bash
@@ -47,25 +35,45 @@ The system captures facial images and uses the pre-trained models to extract and
     ```bash
     npm install
     ```
-3.  Start the backend server:
+3.  **Download Models**:
+    Run the setup script to download the required ONNX and TFLite models to `server/models/`.
     ```bash
-    node index.js
+    node setup_models.js
     ```
-    *Alternatively, you can use `npx nodemon` for development auto-restarts.*
+4.  Start the server:
+    ```bash
+    npm start
+    ```
+    *Server runs on port 3000 by default.*
 
--   `/server`: Backend API and database logic.
+### 2. Client (Frontend)
 
-## Useful Links
-
--   **Library**: [face-api.js on GitHub](https://github.com/justadudewhohacks/face-api.js)
--   **Models**: [face-api.js weights](https://github.com/justadudewhohacks/face-api.js/tree/master/weights)
--   **Documentation**: [face-api.js Documentation](https://justadudewhohacks.github.io/face-api.js/docs/index.html)
+1.  Navigate to the client directory:
+    ```bash
+    cd client
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Start the development interface:
+    ```bash
+    npm run dev
+    ```
 
 ## System Capacity & Privacy
 
--   **Database**: The `attendance.db` is a local SQLite file. Use a tool like [DB Browser for SQLite](https://sqlitebrowser.org/) or the [SQLite Viewer](https://marketplace.visualstudio.com/items?itemName=qwtel.sqlite-viewer) VS Code extension to view it.
--   **Capacity**: The system determines capacity by how many users the **browser** can cross-reference in real-time.
-    -   *Efficient*: 1 - 500 users.
-    -   *Strain*: 500 - 2,000 users (may increase initial load time).
-    -   *Limit*: > 2,000 users may cause significant lag on client devices as every face descriptor is downloaded and matched locally.
--   **Images**: Actual images are **NOT** stored. Only mathematical face descriptors are saved to the database to ensure privacy.
+-   **Database**: The `attendance.db` is a local SQLite file.
+-   **Privacy**: 
+    -   Actual images are **NOT** stored by default (configurable).
+    -   Only mathematical face descriptors (512-float arrays) are saved.
+-   **Capacity**: 
+    -   Server-side matching is highly efficient.
+    -   Supports 1,000+ users with negligible latency on standard CPU hardware.
+    -   No GPU required (uses ONNX Runtime CPU provider).
+
+## Troubleshooting
+
+-   **"ClassIds" error**: Ensure your server is running the latest code with the JSON parsing middleware.
+-   **Models missing**: Run `node setup_models.js` in the `server` folder.
+-   **Recognition Fails**: Ensure good lighting. The system enforces strict matching (0.45 threshold) to prevent false positives.

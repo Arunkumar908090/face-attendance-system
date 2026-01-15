@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as faceapi from 'face-api.js';
-import { UserCheck, Camera, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserCheck, Camera, Info, AlertCircle, CheckCircle, RefreshCw, Layers } from 'lucide-react';
 import { api } from '../api';
+import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 
 function Register() {
     const [formData, setFormData] = useState({
@@ -11,264 +11,350 @@ function Register() {
         department: '',
         course: ''
     });
+    const [classes, setClasses] = useState([]);
+    const [selectedClasses, setSelectedClasses] = useState([]);
+
+    // UI States
     const [initializing, setInitializing] = useState(true);
-    const [faceDetected, setFaceDetected] = useState(false);
-    const [successMsg, setSuccessMsg] = useState('');
-    const [errorMsg, setErrorMsg] = useState('');
-    const [capturedPhoto, setCapturedPhoto] = useState(null);
+    const [status, setStatus] = useState('IDLE'); // IDLE, DETECTING, CAPTURING, READY_TO_SUBMIT, SUBMITTING, SUCCESS, FAIL
+    const [msg, setMsg] = useState({ type: '', text: '' });
+    const [poseStep, setPoseStep] = useState(0); // 0: Front, 1: Angle/Glasses-off
+    const [captures, setCaptures] = useState([]);
+    const [guidance, setGuidance] = useState(null); // Real-time feedback overlay
 
     const videoRef = useRef();
-    const canvasRef = useRef();
-    const streamRef = useRef();
+    const canvasRef = useRef(); // Bounding box overlay
+    const faceDetectorRef = useRef(null);
+    const lastDetectionTime = useRef(0);
+    const detectionFrameRef = useRef(null);
+
+    // Refs for Loop Access (Fix Stale Closures)
+    const stateRef = useRef({
+        status: 'IDLE',
+        poseStep: 0,
+        captures: [],
+        guidance: null
+    });
+
+    // Sync Refs
+    useEffect(() => {
+        stateRef.current.status = status;
+        stateRef.current.poseStep = poseStep;
+        stateRef.current.captures = captures;
+        stateRef.current.guidance = guidance;
+    }, [status, poseStep, captures, guidance]);
+
+    // Load Classes & Detector
+    useEffect(() => {
+        const loadResources = async () => {
+            try {
+                // 1. Load Classes
+                const cls = await api.classes.getAll();
+                setClasses(Array.isArray(cls) ? cls : []);
+
+                // 2. Load Face Detector
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                );
+                faceDetectorRef.current = await FaceDetector.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: `/models/blaze_face_short_range.tflite`,
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    minDetectionConfidence: 0.5 // Lowered to help detection
+                });
+
+                startVideo();
+            } catch (err) {
+                console.error("Init failed:", err);
+                setMsg({ type: 'error', text: "Failed to initialize: " + err.message });
+            }
+        };
+        loadResources();
+        return () => {
+            if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
+        };
+    }, []);
 
     const startVideo = () => {
         navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
             .then(stream => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    streamRef.current = stream;
+                    videoRef.current.onloadeddata = () => {
+                        setInitializing(false);
+                        detectLoop();
+                    };
                 }
             })
-            .catch(err => {
-                console.error("Camera error:", err);
-                setErrorMsg("Hardware Error: Camera access was denied or not found.");
-            });
+            .catch(err => setMsg({ type: 'error', text: "Camera access denied." }));
     };
 
-    useEffect(() => {
-        const loadModels = async () => {
-            const MODEL_URL = '/models';
-            try {
-                //load ssdMobilenetv1 for precision, and Landmark and Recognition for precision
-                await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                ]);
-                startVideo();
-            } catch (err) {
-                console.error("Model load error:", err);
-                setErrorMsg("Critical: Failed to initialize biometric models.");
+    const detectLoop = async () => {
+        if (!faceDetectorRef.current || !videoRef.current) return;
+
+        let startTimeMs = performance.now();
+        if (videoRef.current.currentTime !== lastDetectionTime.current) {
+            lastDetectionTime.current = videoRef.current.currentTime;
+
+            const detections = faceDetectorRef.current.detectForVideo(videoRef.current, startTimeMs).detections;
+
+            // Draw Bounding Boxes
+            if (canvasRef.current) {
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.clearRect(0, 0, 640, 480);
+
+                // Draw detected faces
+                detections.forEach(detection => {
+                    const { originX, originY, width, height } = detection.boundingBox;
+                    const score = detection.categories[0].score;
+
+                    // Box styling
+                    ctx.strokeStyle = score > 0.75 ? '#10b981' : '#f59e0b'; // Green if good, Orange if weak
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.rect(originX, originY, width, height);
+                    ctx.stroke();
+
+                    // Label
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.font = '14px Arial';
+                    ctx.fillText(`Score: ${(score * 100).toFixed(0)}%`, originX, originY - 10);
+                });
             }
-        };
-        loadModels();
 
-        return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
-        };
-    }, []);
+            // Auto-Capture Logic
+            const currentStatus = stateRef.current.status;
 
-    const handleVideoPlay = () => {
-        setInitializing(false);
-        setInterval(async () => {
-            if (videoRef.current && canvasRef.current) {
-                const displaySize = { width: videoRef.current.width, height: videoRef.current.height };
-                faceapi.matchDimensions(canvasRef.current, displaySize);
+            if (currentStatus === 'DETECTING' && detections.length > 0) {
+                const detection = detections[0];
+                const box = detection.boundingBox;
 
-                const detections = await faceapi.detectAllFaces(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
+                // Criteria
+                const isCentered = box.originX > 100 && (box.originX + box.width) < 540;
+                const isBigEnough = box.width > 140; // Increased requirement for quality
+                const isConfident = detection.categories[0].score > 0.75;
 
-                const resizedDetections = faceapi.resizeResults(detections, displaySize);
-                if (canvasRef.current) {
-                    const ctx = canvasRef.current.getContext('2d');
-                    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                let newGuidance = null;
 
-                    // Custom drawing for more premium feel
-                    resizedDetections.forEach(detection => {
-                        const { x, y, width, height } = detection.detection.box;
-                        const pulse = Math.sin(Date.now() / 150) * 0.15 + 0.85;
-                        const mainColor = '#3b82f6'; // Neon Blue
-
-                        ctx.save();
-                        ctx.strokeStyle = mainColor;
-                        ctx.lineWidth = 3;
-                        ctx.globalAlpha = pulse;
-
-                        // 1. High-Tech Corner Brackets
-                        const len = Math.min(width, height) * 0.2;
-                        ctx.beginPath();
-                        ctx.moveTo(x, y + len); ctx.lineTo(x, y); ctx.lineTo(x + len, y);
-                        ctx.moveTo(x + width - len, y); ctx.lineTo(x + width, y); ctx.lineTo(x + width, y + len);
-                        ctx.moveTo(x + width, y + height - len); ctx.lineTo(x + width, y + height); ctx.lineTo(x + width - len, y + height);
-                        ctx.moveTo(x + len, y + height); ctx.lineTo(x, y + height); ctx.lineTo(x, y + height - len);
-                        ctx.stroke();
-
-                        // 2. Neon Glow
-                        ctx.shadowBlur = 10;
-                        ctx.shadowColor = mainColor;
-                        ctx.globalAlpha = pulse * 0.3;
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(x, y, width, height);
-
-                        ctx.restore();
-                    });
+                if (!isConfident) {
+                    newGuidance = "Hold Still";
+                } else if (!isBigEnough) {
+                    newGuidance = "Move Closer";
+                } else if (!isCentered) {
+                    newGuidance = "Center Your Face";
                 }
 
-                setFaceDetected(detections.length > 0);
+                // Update Guidance if changed
+                if (newGuidance !== stateRef.current.guidance) {
+                    setGuidance(newGuidance);
+                }
+
+                if (isCentered && isBigEnough && isConfident) {
+                    capturePhoto();
+                }
+            } else if (currentStatus === 'DETECTING' && detections.length === 0) {
+                if (stateRef.current.guidance !== "Look at Camera") setGuidance("Look at Camera");
+            } else {
+                if (stateRef.current.guidance !== null) setGuidance(null);
             }
-        }, 150);
+        }
+        detectionFrameRef.current = requestAnimationFrame(detectLoop);
     };
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const startEnrollment = () => {
+        if (!formData.name || !formData.matric_no) {
+            setMsg({ type: 'error', text: "Please enter Name and Matric No." });
+            return;
+        }
+        setMsg({ type: 'info', text: "Look at the camera" });
+        setPoseStep(0);
+        setCaptures([]);
+        setStatus('DETECTING');
     };
 
     const capturePhoto = () => {
-        if (!videoRef.current) return null;
+        // Prevent double capture
+        if (stateRef.current.status === 'CAPTURING') return;
+
+        setStatus('CAPTURING');
+        setGuidance("Capturing...");
+
         const canvas = document.createElement('canvas');
-        canvas.width = 480;
-        canvas.height = 360;
-        canvas.getContext('2d').drawImage(videoRef.current, 0, 0, 480, 360);
-        return canvas.toDataURL('image/jpeg', 0.85);
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoRef.current, 0, 0, 640, 480);
+
+        canvas.toBlob(blob => {
+            setCaptures(prev => [...prev, blob]);
+
+            if (stateRef.current.poseStep === 0) {
+                // Done with step 1
+                setPoseStep(1);
+                setMsg({ type: 'info', text: "Step 2: Remove glasses (if any) or turn head slightly." });
+                setGuidance("Great! Get ready for pose 2...");
+
+                // Small delay before next capture to let user read
+                setTimeout(() => {
+                    setStatus('DETECTING');
+                    setGuidance(null);
+                }, 5000);
+            } else {
+                // Done with step 2
+                setStatus('READY_TO_SUBMIT');
+                setMsg({ type: 'success', text: "Captures complete! Ready to submit." });
+                setGuidance("Done!");
+            }
+        }, 'image/jpeg', 0.95);
     };
 
-    const handleRegister = async () => {
-        if (!formData.name || !formData.matric_no) return setErrorMsg("Missing Requirements: Name and Matric No are mandatory.");
-        if (!faceDetected) return setErrorMsg("Vision Error: No face detected in frame.");
+    const handleSubmit = async () => {
+        setStatus('SUBMITTING');
+        const data = new FormData();
+        data.append('name', formData.name);
+        data.append('matric_no', formData.matric_no);
+        data.append('level', formData.level);
+        data.append('department', formData.department);
+        data.append('course', formData.course);
+        data.append('classIds', JSON.stringify(selectedClasses));
 
-        setErrorMsg('');
-        const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-            .withFaceLandmarks()
-            .withFaceDescriptor();
+        captures.forEach(blob => {
+            data.append('images', blob, 'capture.jpg');
+        });
 
-        if (detection) {
-            const descriptor = Array.from(detection.descriptor);
-            const photo = capturePhoto();
-            setCapturedPhoto(photo);
-
-            try {
-                const data = await api.users.register({ ...formData, descriptor, photo });
-                if (data.userId || data.success) {
-                    setSuccessMsg(data.created ? `Profile Created: ${formData.name}` : `Biometric Profile Updated: ${formData.name}`);
-                    setFormData({ name: '', matric_no: '', level: '', department: '', course: '' });
-                    setTimeout(() => {
-                        setSuccessMsg('');
-                        setCapturedPhoto(null);
-                    }, 4000);
-                } else {
-                    setErrorMsg(data.error || 'System Error: Enrollment process failed.');
-                }
-            } catch {
-                setErrorMsg('Network Error: Unable to reach administration server.');
+        try {
+            const res = await api.users.register(data);
+            if (res.success) {
+                setStatus('SUCCESS');
+                setMsg({ type: 'success', text: "Enrollment Successful!" });
+                setFormData({ name: '', matric_no: '', level: '', department: '', course: '' });
+                setSelectedClasses([]);
+                setCaptures([]);
+                setTimeout(() => setStatus('IDLE'), 3000);
+            } else {
+                setStatus('FAIL');
+                setMsg({ type: 'error', text: res.error || "Enrollment failed." });
             }
+        } catch (err) {
+            setStatus('FAIL');
+            setMsg({ type: 'error', text: err.message || "Network error. Check server." });
         }
     };
 
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const toggleClass = (id) => setSelectedClasses(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+
     return (
         <div className="page-container animate-fade">
-            <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-main)', letterSpacing: '-1.5px' }}>
-                    Student Biometric Enrollment
-                </h2>
-                <div className="flex-center gap-2 text-secondary">
-                    <Info size={16} />
-                    <span>Provide student details and alignment for facial token creation.</span>
-                </div>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: 900 }}>Biometric Enrollment</h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
 
-                {/* Left: Form */}
-                <div className="card animate-up" style={{ padding: '2.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-                        <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '0.5rem', borderRadius: '10px' }}>
-                            <UserCheck size={24} />
-                        </div>
-                        <h3 style={{ margin: 0, fontWeight: 700 }}>Profile Information</h3>
-                    </div>
-
-                    {errorMsg && (
-                        <div className="badge badge-danger animate-fade" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '1rem', marginBottom: '1.5rem', borderRadius: '10px' }}>
-                            <AlertCircle size={18} /> {errorMsg}
-                        </div>
-                    )}
-                    {successMsg && (
-                        <div className="badge badge-success animate-fade" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '1rem', marginBottom: '1.5rem', borderRadius: '10px' }}>
-                            <CheckCircle size={18} /> {successMsg}
+                {/* Form Section */}
+                <div className="card" style={{ padding: '2rem' }}>
+                    {msg.text && (
+                        <div className={`badge badge-${msg.type === 'error' ? 'danger' : msg.type === 'success' ? 'success' : 'warning'}`}
+                            style={{ padding: '1rem', width: '100%', marginBottom: '1rem', display: 'flex', gap: '8px', fontSize: '1rem' }}>
+                            <Info size={18} /> {msg.text}
                         </div>
                     )}
 
-                    <div style={{ display: 'grid', gap: '1.5rem' }}>
-                        <div>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Full Legal Name *</label>
-                            <input name="name" placeholder="Enter student's full name" value={formData.name} onChange={handleChange} />
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                        <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} disabled={status !== 'IDLE'} />
+                        <input name="matric_no" placeholder="Matric No" value={formData.matric_no} onChange={handleChange} disabled={status !== 'IDLE'} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <input name="level" placeholder="Level" value={formData.level} onChange={handleChange} disabled={status !== 'IDLE'} />
+                            <input name="department" placeholder="Department" value={formData.department} onChange={handleChange} disabled={status !== 'IDLE'} />
                         </div>
-                        <div>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Matriculation Number *</label>
-                            <input name="matric_no" placeholder="REG-2026-XXXX" value={formData.matric_no} onChange={handleChange} />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Level</label>
-                                <input name="level" placeholder="100" value={formData.level} onChange={handleChange} />
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Department</label>
-                                <input name="department" placeholder="e.g. Science" value={formData.department} onChange={handleChange} />
-                            </div>
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Course Concentration</label>
-                            <input name="course" placeholder="B.Sc. Human Resource Management" value={formData.course} onChange={handleChange} />
-                        </div>
-                    </div>
+                        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} disabled={status !== 'IDLE'} />
 
-                    <button
-                        className="btn btn-primary"
-                        style={{ marginTop: '2.5rem', width: '100%', padding: '1rem', fontSize: '1rem', boxShadow: 'var(--shadow-md)' }}
-                        onClick={handleRegister}
-                        disabled={!faceDetected || !formData.name || !formData.matric_no}
-                    >
-                        <Camera size={20} /> {faceDetected ? 'Generate Biometric Token' : 'Detecting Student Face...'}
-                    </button>
-                    {!faceDetected && <p className="text-secondary" style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem' }}>Camera focus required for enrollment.</p>}
-
-                    <div className="card" style={{ marginTop: '2rem', padding: '1.25rem', background: '#fffbeb', border: '1px solid #fde68a', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                        <div style={{ color: '#d97706', marginTop: '2px' }}>
-                            <Info size={18} />
-                        </div>
                         <div>
-                            <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Pro Tip: Complex Identification</div>
-                            <div style={{ fontSize: '0.85rem', color: '#b45309', lineHeight: '1.4' }}>
-                                For students with <b>glasses, hijabs, or frequent headwear</b>, enroll twice: once with the accessory and once without for maximum recognition reliability.
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '8px', display: 'block' }}>Classes</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {classes.map(c => (
+                                    <div key={c.id} onClick={() => status === 'IDLE' && toggleClass(c.id)}
+                                        style={{
+                                            padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem', cursor: status === 'IDLE' ? 'pointer' : 'default',
+                                            background: selectedClasses.includes(c.id) ? 'var(--primary)' : '#e2e8f0',
+                                            color: selectedClasses.includes(c.id) ? 'white' : '#64748b',
+                                            border: '1px solid transparent',
+                                            transition: 'all 0.2s'
+                                        }}>
+                                        {c.code}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Right: Camera Feed */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="video-wrapper" style={{ borderRadius: 'var(--radius-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-light)' }}>
-                        {initializing && (
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', zIndex: 20 }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div className="text-primary" style={{ marginBottom: '1rem', transform: 'scale(2)' }}>● ● ●</div>
-                                    <div style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Calibrating Sensor...</div>
-                                </div>
+                    <div style={{ marginTop: '2rem' }}>
+                        {status === 'IDLE' && (
+                            <button className="btn btn-primary" style={{ width: '100%' }} onClick={startEnrollment}>
+                                <UserCheck size={20} /> Start Enrollment
+                            </button>
+                        )}
+                        {status === 'READY_TO_SUBMIT' && (
+                            <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSubmit}>
+                                <CheckCircle size={20} /> Submit Profile
+                            </button>
+                        )}
+                        {(status === 'DETECTING' || status === 'CAPTURING') && (
+                            <div className="btn" style={{ width: '100%', textAlign: 'center', background: '#e0f2fe', color: '#0369a1', cursor: 'default' }}>
+                                <Camera className="spin" size={20} style={{ marginRight: '8px' }} />
+                                {poseStep === 0 ? "Scanning Face..." : "Scanning Second Pose..."}
                             </div>
                         )}
-                        <video ref={videoRef} autoPlay muted onPlay={handleVideoPlay} width="640" height="480" style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
-                        <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+                    </div>
+                </div>
+
+                {/* Camera Section */}
+                <div>
+                    <div className="video-wrapper" style={{ borderRadius: '20px', overflow: 'hidden', position: 'relative', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' }}>
+                        {initializing && <div style={{ position: 'absolute', inset: 0, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Initializing Camera...</div>}
+
+                        {/* Video Layer */}
+                        <video ref={videoRef} autoPlay muted playsInline style={{ width: '640px', height: '480px', display: 'block', maxWidth: '100%', height: 'auto' }}></video>
+
+                        {/* Bounding Box Overlay Layer */}
+                        <canvas ref={canvasRef} width="640" height="480" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />
+
+                        {/* Captures Thumbnails */}
+                        <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            {captures.map((blob, i) => (
+                                <div key={i} style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', border: '3px solid var(--primary)', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
+                                    <img src={URL.createObjectURL(blob)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                            ))}
+                        </div>
+                        {/* Guidance Overlay */}
+                        {guidance && (
+                            <div style={{ position: 'absolute', bottom: '20%', left: '0', right: '0', textAlign: 'center' }}>
+                                <span style={{ background: 'rgba(0,0,0,0.7)', color: 'white', padding: '0.5rem 1.5rem', borderRadius: '30px', fontWeight: 600, backdropFilter: 'blur(4px)' }}>
+                                    {guidance}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
-                    {capturedPhoto ? (
-                        <div className="card animate-fade" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1.5rem', background: 'var(--success-bg)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
-                            <img src={capturedPhoto} alt="Captured" style={{ width: 70, height: 70, borderRadius: '12px', objectFit: 'cover', border: '2px solid white' }} />
-                            <div>
-                                <div style={{ fontWeight: 700, color: '#065f46', fontSize: '1rem' }}>Snapshot Captured</div>
-                                <div style={{ color: '#047857', fontSize: '0.85rem' }}>Facial map generated successfully.</div>
+                    <div className="card" style={{ marginTop: '1rem', padding: '1.25rem' }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}><Layers size={18} /> Enrollment Steps</h4>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            <div style={{ opacity: poseStep >= 0 ? 1 : 0.5, fontWeight: poseStep === 0 ? 700 : 400, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                1. Front Face Capture
+                                {captures.length > 0 && <CheckCircle size={14} color="var(--success)" />}
+                            </div>
+                            <div style={{ opacity: poseStep >= 1 ? 1 : 0.5, fontWeight: poseStep === 1 ? 700 : 400, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                2. Alternate Pose (No Glasses/Angle)
+                                {captures.length > 1 && <CheckCircle size={14} color="var(--success)" />}
                             </div>
                         </div>
-                    ) : faceDetected && (
-                        <div className="card animate-fade" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: 'var(--primary-light)', borderColor: 'rgba(37, 99, 235, 0.1)' }}>
-                            <div className="text-primary"><UserCheck size={20} /></div>
-                            <div style={{ fontWeight: 600, color: 'var(--primary)', fontSize: '0.9rem' }}>Optimal Focus Achieved</div>
-                        </div>
-                    )}
+                    </div>
                 </div>
+
             </div>
         </div>
     );

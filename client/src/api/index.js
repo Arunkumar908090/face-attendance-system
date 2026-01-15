@@ -7,15 +7,44 @@ export const api = {
             return res.json();
         },
         register: async (userData) => {
+            const isFormData = userData instanceof FormData;
             const res = await fetch(`${BASE_URL}/users/register`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData)
+                headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+                body: isFormData ? userData : JSON.stringify(userData)
             });
+
+            if (!res.ok) {
+                const text = await res.text();
+                try {
+                    const json = JSON.parse(text);
+                    return { success: false, error: json.error || res.statusText };
+                } catch (e) {
+                    return { success: false, error: `Server Error (${res.status}): ${text.substring(0, 100)}` };
+                }
+            }
             return res.json();
         },
         delete: async (id) => {
             const res = await fetch(`${BASE_URL}/users/${id}`, { method: 'DELETE' });
+            return res.json();
+        }
+    },
+    classes: {
+        getAll: async () => {
+            const res = await fetch(`${BASE_URL}/classes`);
+            return res.json();
+        },
+        create: async (data) => {
+            const res = await fetch(`${BASE_URL}/classes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return res.json();
+        },
+        delete: async (id) => {
+            const res = await fetch(`${BASE_URL}/classes/${id}`, { method: 'DELETE' });
             return res.json();
         }
     },
@@ -28,11 +57,11 @@ export const api = {
             const res = await fetch(`${BASE_URL}/sessions/history`);
             return res.json();
         },
-        create: async (name, type, duration = 0) => {
+        create: async (name, type, duration = 0, classId = null) => {
             const res = await fetch(`${BASE_URL}/sessions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'create', name, type, duration })
+                body: JSON.stringify({ action: 'create', name, type, duration, classId })
             });
             return res.json();
         },
@@ -63,6 +92,15 @@ export const api = {
             return res.json();
         },
         log: async (userId, image) => {
+            // Support FormData for image upload
+            if (userId instanceof FormData) {
+                const res = await fetch(`${BASE_URL}/attendance`, {
+                    method: 'POST',
+                    body: userId // In this case, first arg is FormData
+                });
+                return res.json();
+            }
+
             const res = await fetch(`${BASE_URL}/attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -83,6 +121,9 @@ export const api = {
             return res.json();
         },
         exportUrl: `${BASE_URL}/attendance/export`,
-        exportMatrixUrl: (sessionName) => `${BASE_URL}/attendance/export-matrix?sessionName=${encodeURIComponent(sessionName)}`
+        exportMatrixUrl: (identifier, isClass = false) => {
+            const param = isClass ? `classId=${identifier}` : `sessionName=${encodeURIComponent(identifier)}`;
+            return `${BASE_URL}/attendance/export-matrix?${param}`;
+        }
     }
 };
