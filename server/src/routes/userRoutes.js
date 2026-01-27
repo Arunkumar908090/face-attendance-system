@@ -25,22 +25,25 @@ const parseFormData = (req, res, next) => {
 };
 
 // Register a new user
-// Note: 'image' is the field name for the uploaded file
-router.post('/register', upload.array('images', 3), parseFormData, validate(registerSchema), async (req, res) => {
+router.post('/register', upload.any(), parseFormData, validate(registerSchema), async (req, res) => {
+    console.log(`[UserRoute] Headers:`, req.headers['content-type']);
+    console.log(`[UserRoute] Body Keys:`, Object.keys(req.body));
+    console.log(`[UserRoute] Files:`, req.files ? req.files.map(f => `${f.fieldname} (${f.mimetype})`) : 'none');
+
+    // Collect all uploaded images regardless of field name
+    const images = req.files ? req.files.filter(f => f.mimetype.startsWith('image/')) : [];
+    console.log(`[UserRoute] Found ${images.length} candidate images.`);
+
     // req.body contains text fields
     const { name, matric_no, level, department, course, section, classIds } = req.body;
     let { descriptor, photo } = req.body;
 
     // Check for multiple files
-    if (req.files && req.files.length > 0) {
+    if (images.length > 0) {
         try {
-            console.log(`Processing images for user ${matric_no}...`);
-            const descriptors = [];
-            for (const file of req.files) {
-                const embedding = await faceService.generateEmbedding(file.buffer);
-                descriptors.push(embedding);
-            }
-            descriptor = descriptors; // Pass array of embeddings
+            console.log(`Processing ${images.length} images for user ${matric_no} in parallel...`);
+            // Parallelize embedding generation
+            descriptor = await Promise.all(images.map(file => faceService.generateEmbedding(file.buffer)));
 
             // Set photo to something indicating files were provided
             if (!photo) photo = "server_processed_image";

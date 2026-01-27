@@ -131,11 +131,17 @@ function Attendance() {
             ctx.clearRect(0, 0, 640, 480);
         }
 
+        // Size for transfer (smaller = faster)
+        const targetWidth = 320;
+        const targetHeight = 240;
+
         const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 480;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoRef.current, 0, 0, 640, 480);
+
+        // Draw resized version
+        ctx.drawImage(videoRef.current, 0, 0, targetWidth, targetHeight);
 
         canvas.toBlob(async (blob) => {
             const formData = new FormData();
@@ -159,7 +165,7 @@ function Attendance() {
                     cooldownRef.current = false;
                 }, 2000);
             }
-        }, 'image/jpeg', 0.85);
+        }, 'image/jpeg', 0.8);
     };
 
     return (
@@ -205,6 +211,11 @@ function Attendance() {
                                 {feedback.type === 'success' ? <CheckCircle size={64} /> : <UserX size={64} />}
                                 <div style={{ fontSize: '2rem', fontWeight: 800, marginTop: '1rem' }}>{feedback.name || 'Error'}</div>
                                 <div style={{ fontSize: '1.2rem' }}>{feedback.text}</div>
+                                {feedback.type === 'error' && (
+                                    <button className="btn btn-danger" style={{ marginTop: '1rem' }} onClick={() => setFeedback(null)}>
+                                        <RefreshCw size={18} style={{ marginRight: '8px' }} /> Try Again
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

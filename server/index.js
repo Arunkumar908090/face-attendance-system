@@ -21,7 +21,15 @@ app.use('/api/classes', require('./src/routes/classRoutes'));
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error("Unhandled Error:", err);
+    // Multer error handling
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+            success: false,
+            error: `Unexpected field: "${err.field}". Enrollment uses "images" and Attendance uses "image".`
+        });
+    }
+
+    console.error("Caught Error:", err);
     res.status(500).json({
         success: false,
         error: err.message || "Internal Server Error",
@@ -29,7 +37,25 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, '127.0.0.1', () => {
+// Process Level Fatal Error Logging
+process.on('uncaughtException', (err) => {
+    console.error('FATAL EXCEPTION:', err.message);
+    console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('UNHANDLED REJECTION at:', promise, 'reason:', reason);
+});
+
+app.listen(PORT, '127.0.0.1', async () => {
     console.log(`Server running on http://127.0.0.1:${PORT}`);
+
+    // Pre-load Models
+    try {
+        const faceService = require('./src/services/faceService');
+        await faceService.loadModels();
+    } catch (err) {
+        console.error("Critical Failure: Could not load AI models on startup.");
+    }
 });
 

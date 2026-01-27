@@ -10,6 +10,6 @@ const registerSchema = Joi.object({
     descriptor: Joi.array().items(Joi.number()).optional(),
     section: Joi.string().optional().allow(''),
     classIds: Joi.array().items(Joi.string(), Joi.number()).optional()
-});
+}).unknown(true);
 
 module.exports = { registerSchema };

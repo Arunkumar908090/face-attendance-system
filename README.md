@@ -21,6 +21,14 @@ The system processes biometrics securely on the server:
 4.  **Embedding**: **ArcFace** generates a 512-dimensional vector embedding.
 5.  **Matching**: Server computes Cosine Similarity against the registered user database (Threshold: 0.45).
 
+## Prerequisites
+
+Before setting up the project, ensure you have the following installed on your system:
+
+-   **Node.js (LTS Version)**: The system requires Node.js and npm (Node Package Manager).
+    -   Download from: [nodejs.org](https://nodejs.org/)
+-   **Browser**: A modern web browser (Chrome, Firefox, or Edge) with webcam access enabled.
+
 ## Installation and Setup
 
 ### 1. Server (Backend)
@@ -60,6 +68,52 @@ The backend handles all recognition logic.
     ```bash
     npm run dev
     ```
+### Windows Setup
+
+If you encounter native module errors on Windows (e.g., `better-sqlite3` compilation issues):
+
+1. **Ensure Node.js and npm are installed**:
+   ```bash
+   node --version
+   npm --version
+   ```
+
+2. **Clear and reinstall dependencies**:
+   ```bash
+   # In the server directory
+   cd server
+   rmdir /s /q node_modules
+   del package-lock.json
+   npm install
+   ```
+
+3. **Start the server**:
+   ```bash
+   node index.js
+   ```
+   *Server runs on port 3001 by default.*
+
+4. **In a new terminal, start the client**:
+   ```bash
+   cd client
+   npm install  
+   npm run dev
+   ```
+5. **Change Powershell permissions**:
+    run 
+    ```bash
+    Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned on powershell
+    ```
+
+
+**Note**: If you see "npm is not recognized", restart your terminal or ensure Node.js is in your system PATH.
+
+## Troubleshooting
+
+-   **"ClassIds" error**: Ensure your server is running the latest code with the JSON parsing middleware.
+-   **Models missing**: Run `node setup_models.js` in the `server` folder.
+-   **Recognition Fails**: Ensure good lighting. The system enforces strict matching (0.45 threshold) to prevent false positives.
+-   **Native module errors on Windows**: Follow the Windows Setup section above to rebuild dependencies.
 
 ## System Capacity & Privacy
 
@@ -74,6 +128,16 @@ The backend handles all recognition logic.
 
 ## Troubleshooting
 
+-   **"npm is not recognized" (Windows)**:
+    -   **Cause**: Node.js is not installed, or its path is not added to the system's environment variables.
+    -   **Solution**: 
+        1.  Download and install Node.js from [nodejs.org](https://nodejs.org/). 
+        2.  Make sure to check "Add to PATH" during installation.
+        3.  **Restart your terminal** (PowerShell or Command Prompt) after installation.
+-   **"install npm" error**:
+    -   The command is `npm install`, not `install npm`. `npm` is the tool, and `install` is the action.
 -   **"ClassIds" error**: Ensure your server is running the latest code with the JSON parsing middleware.
 -   **Models missing**: Run `node setup_models.js` in the `server` folder.
 -   **Recognition Fails**: Ensure good lighting. The system enforces strict matching (0.45 threshold) to prevent false positives.
+
+

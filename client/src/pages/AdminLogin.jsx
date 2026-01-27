@@ -9,7 +9,7 @@ function AdminLogin() {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        // Simple demonstration logic - in a real app, this would be a server-side check
+        // switch to a server side check for authentication. for now, I'm making this hardcoded
         if (password === 'admin123') {
             localStorage.setItem('isAdmin', 'true');
             navigate('/admin');

@@ -181,11 +181,17 @@ function Register() {
         setStatus('CAPTURING');
         setGuidance("Capturing...");
 
+        // Size for transfer (smaller = faster)
+        const targetWidth = 320;
+        const targetHeight = 240;
+
         const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 480;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoRef.current, 0, 0, 640, 480);
+
+        // Draw resized version
+        ctx.drawImage(videoRef.current, 0, 0, targetWidth, targetHeight);
 
         canvas.toBlob(blob => {
             setCaptures(prev => [...prev, blob]);
@@ -207,7 +213,7 @@ function Register() {
                 setMsg({ type: 'success', text: "Captures complete! Ready to submit." });
                 setGuidance("Done!");
             }
-        }, 'image/jpeg', 0.95);
+        }, 'image/jpeg', 0.8); // Slightly lower quality for even faster transfer
     };
 
     const handleSubmit = async () => {
@@ -307,6 +313,11 @@ function Register() {
                                 <Camera className="spin" size={20} style={{ marginRight: '8px' }} />
                                 {poseStep === 0 ? "Scanning Face..." : "Scanning Second Pose..."}
                             </div>
+                        )}
+                        {status === 'FAIL' && (
+                            <button className="btn btn-warning" style={{ width: '100%' }} onClick={() => { setStatus('IDLE'); setMsg({ type: '', text: '' }); }}>
+                                <RefreshCw size={20} /> Retry Enrollment
+                            </button>
                         )}
                     </div>
                 </div>

@@ -14,15 +14,18 @@ const upload = multer({
 });
 
 // Log attendance (Scan Face)
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', upload.any(), async (req, res) => {
     // userId is NO LONGER required in body if image is provided
     let { userId } = req.body;
 
+    // Find any image file
+    const file = req.files ? req.files.find(f => f.mimetype.startsWith('image/')) : null;
+
     try {
-        if (req.file) {
+        if (file) {
             // VERIFY FACE
-            console.log("Verifying face...");
-            const recognizedUserId = await attendanceService.verifyFace(req.file.buffer);
+            console.log(`Verifying face from field: ${file.fieldname}...`);
+            const recognizedUserId = await attendanceService.verifyFace(file.buffer);
 
             if (!recognizedUserId) {
                 return res.status(401).json({ error: 'Face not recognized' });

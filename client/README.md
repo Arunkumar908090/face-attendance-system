@@ -20,6 +20,14 @@ This project utilizes specific pre-trained models from the `face-api.js` library
 
 The system captures facial images and uses the pre-trained models to extract and identify unique facial features. Instead of storing photos, it converts the face into a mathematical descriptor (a list of numbers representing facial features) and saves only that descriptor in the attendance.db SQLite database. This approach is great for privacy, but it means you cannot view the photos of registered users later.
 
+## Prerequisites
+
+Before setting up the frontend, ensure you have the following installed:
+
+-   **Node.js (LTS Version)**: Required for running the Vite development server and installing dependencies.
+    -   Download from: [nodejs.org](https://nodejs.org/)
+-   **Webcam**: A functional webcam is required for facial recognition.
+
 ## Installation and Setup
 
 ### Client (Frontend)
