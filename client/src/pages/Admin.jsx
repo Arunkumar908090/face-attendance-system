@@ -308,13 +308,9 @@ function Admin() {
 
                 {activeTab === 'sessions' && (
                     <div style={{ padding: '2.5rem' }}>
-                        <div style={{ marginBottom: '2.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input placeholder="Filter live by Session Name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ paddingLeft: '3rem' }} />
-                            </div>
-                        </div>
                         <SessionManager
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
                             activeSession={activeSession}
                             sessionHistory={sessionHistory.filter(s => s.name.toLowerCase().includes(debouncedSearch.toLowerCase()))}
                             newSessionName={newSessionName}
@@ -333,13 +329,11 @@ function Admin() {
 
                 {activeTab === 'classes' && (
                     <div style={{ padding: '2.5rem' }}>
-                        <div style={{ marginBottom: '2.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                            <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-                                <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input placeholder="Filter live by Class Code or Title..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ paddingLeft: '3rem' }} />
-                            </div>
-                        </div>
-                        <ClassManager debouncedSearch={debouncedSearch} />
+                        <ClassManager
+                            debouncedSearch={debouncedSearch}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                        />
                     </div>
                 )}
             </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, Trash2, Layers } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Layers, Search } from 'lucide-react';
 import { api } from '../../api';
 
-function ClassManager({ debouncedSearch = '' }) {
+function ClassManager({ debouncedSearch = '', searchQuery, setSearchQuery }) {
     const [classes, setClasses] = useState([]);
     const [newClass, setNewClass] = useState({ name: '', code: '', department: '' });
 
@@ -95,9 +95,15 @@ function ClassManager({ debouncedSearch = '' }) {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
-                <Layers className="text-secondary" size={20} />
-                <h3 style={{ margin: 0, color: 'var(--text-main)', fontWeight: 800 }}>Existing Classes</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Layers className="text-secondary" size={20} />
+                    <h3 style={{ margin: 0, color: 'var(--text-main)', fontWeight: 800 }}>Existing Classes</h3>
+                </div>
+                <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input placeholder="Filter live by Class Code or Title..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ paddingLeft: '3rem' }} />
+                </div>
             </div>
 
             <div className="table-container" style={{ border: '1px solid var(--border-light)', borderRadius: 'var(--radius-lg)' }}>

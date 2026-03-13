@@ -10,7 +10,8 @@ import {
     ChevronRight,
     LogIn,
     LogOut,
-    BookOpen
+    BookOpen,
+    Search
 } from 'lucide-react';
 import { api } from '../../api';
 
@@ -26,7 +27,9 @@ function SessionManager({
     onEndSession,
     onDeleteSession,
     onGetStats,
-    onExportMatrix
+    onExportMatrix,
+    searchQuery,
+    setSearchQuery
 }) {
     const [classes, setClasses] = useState([]);
     const [selectedClass, setSelectedClass] = useState('');
@@ -188,10 +191,14 @@ function SessionManager({
                 </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Calendar className="text-secondary" size={20} />
                     <h3 style={{ margin: 0, color: 'var(--text-main)', fontWeight: 800 }}>Audit Archives</h3>
+                </div>
+                <div style={{ position: 'relative', flex: 1, maxWidth: '400px', marginLeft: 'auto' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input placeholder="Filter live by Session Name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ paddingLeft: '3rem' }} />
                 </div>
                 <div style={{ background: 'var(--bg-main)', color: 'var(--text-secondary)', padding: '0.4rem 1rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
                     HISTORY
