@@ -256,7 +256,7 @@ function Register() {
             if (stateRef.current.poseStep === 0) {
                 // Done with step 1
                 setPoseStep(1);
-                setMsg({ type: 'info', text: "Step 2: Remove glasses (if any) or turn head slightly." });
+                setMsg({ type: 'info', text: "Step 2: Turn head slightly (Keep glasses off)." });
                 setGuidance("Great! Get ready for pose 2...");
 
                 // Small delay before next capture to let user read
@@ -466,11 +466,11 @@ function Register() {
                         <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}><Layers size={18} /> Enrollment Steps</h4>
                         <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                             <div style={{ opacity: poseStep >= 0 ? 1 : 0.5, fontWeight: poseStep === 0 ? 700 : 400, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                1. Front Face Capture
+                                1. Front Face Capture (No Glasses)
                                 {captures.length > 0 && <CheckCircle size={14} color="var(--success)" />}
                             </div>
                             <div style={{ opacity: poseStep >= 1 ? 1 : 0.5, fontWeight: poseStep === 1 ? 700 : 400, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                2. Alternate Pose (No Glasses/Angle)
+                                2. Alternate Pose (Turn Head Slightly)
                                 {captures.length > 1 && <CheckCircle size={14} color="var(--success)" />}
                             </div>
                         </div>

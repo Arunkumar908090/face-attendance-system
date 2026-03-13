@@ -72,7 +72,7 @@ function Home() {
                                         <UserPlus size={18} /> First-Time Enrollment
                                     </h4>
                                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, margin: 0 }}>
-                                        Before you can mark attendance, navigate to the <strong style={{ color: 'var(--text-main)' }}>Register Face</strong> portal. Enter your academic details and follow the on-screen prompts to capture your facial biometric data. Note: The system will require you to hold still and take two captures for accuracy.
+                                        Before you can mark attendance, navigate to the <strong style={{ color: 'var(--text-main)' }}>Register Face</strong> portal. Enter your academic details and follow the on-screen prompts to capture your facial biometric data. Note: The system will require you to hold still without glasses and take two captures for accuracy.
                                     </p>
                                 </div>
                             </div>
