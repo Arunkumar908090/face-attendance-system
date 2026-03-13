@@ -158,7 +158,7 @@ function SessionManager({
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
                         <Activity className={activeSession ? 'text-success' : 'text-muted'} size={24} />
-                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontWeight: 800 }}>System Integrity</h3>
+                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontWeight: 800 }}>System Status</h3>
                     </div>
 
                     {activeSession ? (
