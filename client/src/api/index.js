@@ -9,7 +9,7 @@ const apiFetch = async (url, options = {}) => {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, headers, credentials: 'include' });
 
     // Global catch for unauthorized/forbidden responses
     if (response.status === 401 || response.status === 403) {
@@ -27,7 +27,8 @@ export const api = {
             const res = await fetch(`${BASE_URL}/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(credentials)
+                body: JSON.stringify(credentials),
+                credentials: 'include'
             });
             return res.json();
         }

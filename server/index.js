@@ -24,11 +24,11 @@ app.use(cors({
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
-        // Match localhost or Render.com domains
+        // Match localhost, development IPs, or any onrender.com subdomain
         const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
-                          origin.endsWith('.onrender.com') ||
-                          origin.includes('localhost:') ||
-                          origin.includes('127.0.0.1:');
+                          /\.onrender\.com$/.test(origin) ||
+                          /^http:\/\/localhost:\d+$/.test(origin) ||
+                          /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
 
         if (!isAllowed) {
             console.log(`[CORS Blocked] Origin: ${origin}`);
@@ -36,7 +36,8 @@ app.use(cors({
             return callback(new Error(msg), false);
         }
         return callback(null, true);
-    }
+    },
+    credentials: true
 }));
 app.use(bodyParser.json({ limit: '50mb' }));
 
