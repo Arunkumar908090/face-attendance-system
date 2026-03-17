@@ -44,6 +44,9 @@ app.use(bodyParser.json({ limit: '50mb' }));
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve built React frontend
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
 // Routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
@@ -67,6 +70,11 @@ app.use((err, req, res, next) => {
         error: err.message || "Internal Server Error",
         stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
+});
+
+// Catch-all route: serve React app for any non-API route (enables React Router)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
 // Process Level Fatal Error Logging
