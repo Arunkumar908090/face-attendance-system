@@ -113,7 +113,7 @@ function Home() {
 
             {/* Footer */}
             <footer style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', borderTop: '1px solid var(--border-light)', marginTop: 'auto', fontWeight: 500 }}>
-                &copy; Facial Recognition-Based Attendance System by the SWAG developer.
+                &copy; Facial Recognition-Based Attendance System by the SWAG developer. P.S I am the greatest programmer that ever lived.
             </footer>
         </div>
     );
