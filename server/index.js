@@ -13,8 +13,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const allowedOrigins = [
-    'http://localhost:5173', 
-    'http://127.0.0.1:5173', 
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
     'http://localhost:3000',
     'https://face-attendance-system-prod.com'
 ];
@@ -23,12 +23,12 @@ app.use(cors({
     origin: function (origin, callback) {
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        
+
         // Match localhost, development IPs, or any onrender.com subdomain
-        const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
-                          /\.onrender\.com$/.test(origin) ||
-                          /^http:\/\/localhost:\d+$/.test(origin) ||
-                          /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
+        const isAllowed = allowedOrigins.indexOf(origin) !== -1 ||
+            /\.onrender\.com$/.test(origin) ||
+            /^http:\/\/localhost:\d+$/.test(origin) ||
+            /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
 
         if (!isAllowed) {
             console.log(`[CORS Blocked] Origin: ${origin}`);
@@ -73,7 +73,7 @@ app.use((err, req, res, next) => {
 });
 
 // Catch-all route: serve React app for any non-API route (enables React Router)
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 

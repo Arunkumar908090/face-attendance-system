@@ -9,10 +9,9 @@ function Attendance() {
     const [logs, setLogs] = useState([]);
     const [session, setSession] = useState(null);
     const [timeLeft, setTimeLeft] = useState(null);
-    const [status, setStatus] = useState('UNINITIALIZED'); // UNINITIALIZED, IDLE, SCANNING, VERIFYING, COOLDOWN, EXPIRED
+    const [status, setStatus] = useState('IDLE'); // IDLE, SCANNING, VERIFYING, COOLDOWN, EXPIRED
     const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text: '', name: '' }
     const [cameraError, setCameraError] = useState(false);
-    const [modelsLoaded, setModelsLoaded] = useState(false);
 
     const videoRef = useRef();
     const canvasRef = useRef(); // Bounding Box Overlay
@@ -30,12 +29,11 @@ function Attendance() {
 
     // Refs for Loop Access (Fix Stale Closures)
     const stateRef = useRef({
-        status: 'UNINITIALIZED',
+        status: 'IDLE',
         session: null,
         guidance: null,
         livenessStage: 'INIT',
-        livenessChallenge: null,
-        modelsLoaded: false
+        livenessChallenge: null
     });
 
     // Sync Refs
@@ -45,8 +43,7 @@ function Attendance() {
         stateRef.current.guidance = guidance;
         stateRef.current.livenessStage = livenessStage;
         stateRef.current.livenessChallenge = livenessChallenge;
-        stateRef.current.modelsLoaded = modelsLoaded;
-    }, [status, session, guidance, livenessStage, livenessChallenge, modelsLoaded]);
+    }, [status, session, guidance, livenessStage, livenessChallenge]);
 
     // Initial Setup
     useEffect(() => {
@@ -63,13 +60,12 @@ function Attendance() {
                     faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
                     faceapi.nets.faceRecognitionNet.loadFromUri('/models')
                 ]);
-                setModelsLoaded(true);
-                setInitMsg("System ready. Click 'Start Scanner'.");
-                setInitializing(false);
+                setInitMsg("Initializing Camera...");
+
+                startVideo();
             } catch (err) {
                 console.error("Setup error", err);
                 setInitMsg("Failed to load models: " + err.message);
-                setInitializing(false);
             }
         };
         setup();
@@ -82,7 +78,7 @@ function Attendance() {
     }, []);
 
     const startVideo = () => {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
             .then(stream => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
@@ -141,8 +137,10 @@ function Attendance() {
     }, [session]);
 
     const detectLoop = async () => {
-        if (!stateRef.current.modelsLoaded) {
-            detectionFrameRef.current = requestAnimationFrame(detectLoop);
+        if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || stateRef.current.status === 'EXPIRED') {
+            if (stateRef.current.status !== 'EXPIRED') {
+                detectionFrameRef.current = requestAnimationFrame(detectLoop);
+            }
             return;
         }
 
@@ -189,8 +187,8 @@ function Attendance() {
                         } else {
                             // Face is valid, handle liveness
                             if (stage === 'INIT') {
-                                // Enforce BLINK to require strong liveness validation via Eye Aspect Ratio (EAR)
-                                const selected = 'BLINK';
+                                // Sustained expressions are much more reliable than fast blinks on webcams
+                                const selected = 'SMILE';
                                 setLivenessChallenge(selected);
                                 setLivenessStage('CHALLENGE');
                                 newGuidance = getChallengeText(selected);
@@ -414,17 +412,6 @@ function Attendance() {
                                 <AlertCircle size={48} className="text-warning" style={{ marginBottom: '1rem' }} />
                                 <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>No Active Session</h3>
                                 <p style={{ opacity: 0.8 }}>Your lecturer has not started a session.</p>
-                            </div>
-                        )}
-
-                        {status === 'UNINITIALIZED' && !initializing && (
-                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', backdropFilter: 'blur(8px)', zIndex: 10 }}>
-                                <Camera size={48} style={{ color: 'var(--success)', marginBottom: '1rem' }} />
-                                <h3 style={{ fontSize: '1.8rem', fontWeight: 900 }}>Ready to Scan</h3>
-                                <p style={{ opacity: 0.8, fontSize: '1.1rem', marginBottom: '1.5rem' }}>Camera access is paused until verification begins.</p>
-                                <button className="btn btn-primary" onClick={startVideo} style={{ padding: '1rem 2.5rem', borderRadius: '50px' }}>
-                                    Start Scanner
-                                </button>
                             </div>
                         )}
 
