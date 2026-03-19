@@ -65,10 +65,16 @@ function App() {
           </nav>
 
           {isMobile && (
-            <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 z-[100] flex justify-between items-center px-8 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))', paddingTop: '1rem' }}>
-              <NavLink to="/" className="flex flex-col items-center text-slate-400 gap-1 active:text-blue-600 transition-colors" label={<><HomeIcon size={26} /><span className="text-[11px] font-bold">Home</span></>} />
+            <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid var(--border-light)', zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 2rem calc(1rem + env(safe-area-inset-bottom)) 2rem', boxShadow: '0 -10px 40px rgba(0,0,0,0.08)' }}>
               
-              <NavLink to="/register" className="flex items-center justify-center bg-blue-600 text-white rounded-full px-10 py-3.5 font-bold text-[15px] shadow-xl shadow-blue-500/30 active:scale-95 transition-transform" label="ENROLL NOW" />
+              <Link to="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#94a3b8', textDecoration: 'none' }}>
+                <HomeIcon size={28} style={{ marginBottom: '4px' }} />
+                <span style={{ fontSize: '12px', fontWeight: 800 }}>Home</span>
+              </Link>
+              
+              <Link to="/register" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: 'white', borderRadius: '50px', padding: '0.85rem 3rem', fontWeight: 800, fontSize: '15px', textDecoration: 'none', boxShadow: '0 8px 25px rgba(59,130,246,0.3)' }}>
+                ENROLL NOW
+              </Link>
             </div>
           )}
 

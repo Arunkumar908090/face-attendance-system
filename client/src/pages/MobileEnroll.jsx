@@ -301,8 +301,8 @@ function MobileEnroll() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
                 
                 {/* Camera Section */}
-                <div className="card" style={{ padding: '1rem', width: '100%' }}>
-                    <div className="video-wrapper" style={{ position: 'relative', width: '100%', borderRadius: 'var(--radius-xl)', overflow: 'hidden', minHeight: '300px', background: '#f8fafc', border: '4px solid white', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div className="card" style={{ padding: '0.5rem', width: '100%' }}>
+                    <div style={{ position: 'relative', width: '100%', borderRadius: 'calc(var(--radius-xl) - 0.5rem)', overflow: 'hidden', background: '#0f172a', border: '3px solid white', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)' }}>
                         {cameraError ? (
                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', backdropFilter: 'blur(4px)', zIndex: 10, padding: '1rem', textAlign: 'center' }}>
                                 <AlertCircle size={48} style={{ color: 'var(--danger)', marginBottom: '0.5rem' }} />
@@ -310,7 +310,7 @@ function MobileEnroll() {
                                 <p style={{ opacity: 0.8, fontSize: '0.9rem', margin: 0 }}>Please allow camera permissions in your browser settings to enroll.</p>
                             </div>
                         ) : initializing && (
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: 'var(--text-muted)', fontWeight: 500, zIndex: 10 }}>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', fontWeight: 500, zIndex: 10 }}>
                                 Starting Camera...
                             </div>
                         )}
@@ -320,27 +320,27 @@ function MobileEnroll() {
                             autoPlay 
                             muted 
                             playsInline 
-                            style={{ width: '100%', height: 'auto', display: 'block' }} 
+                            style={{ width: '100%', height: 'auto', display: 'block', transform: 'scaleX(-1)' }} 
                         />
 
                         <canvas 
                             ref={canvasRef} 
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5 }} 
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 5, transform: 'scaleX(-1)' }} 
                         />
 
                         {/* Capture Thumbnails Overlay */}
                         <div style={{ position: 'absolute', bottom: '1rem', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '0.75rem', zIndex: 10 }}>
                             {captures.map((blob, i) => (
-                                <div key={i} style={{ width: '3.5rem', height: '3.5rem', borderRadius: '0.75rem', overflow: 'hidden', border: '3px solid var(--primary)', boxShadow: '0 4px 6px rgba(0,0,0,0.2)', background: 'white' }}>
-                                    <img src={URL.createObjectURL(blob)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <div key={i} style={{ width: '3.5rem', height: '3.5rem', borderRadius: '0.75rem', overflow: 'hidden', border: '3px solid var(--primary)', boxShadow: '0 4px 6px rgba(0,0,0,0.4)', background: 'black' }}>
+                                    <img src={URL.createObjectURL(blob)} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
                                 </div>
                             ))}
                         </div>
 
                         {/* Guidance Overlay */}
                         {guidance && (
-                            <div style={{ position: 'absolute', bottom: '20%', left: 0, right: 0, textAlign: 'center', zIndex: 6 }}>
-                                <span style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', color: 'var(--text-main)', padding: '0.5rem 1.25rem', borderRadius: '50px', fontWeight: 700, fontSize: '0.9rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', border: '1px solid var(--border-light)' }}>
+                            <div style={{ position: 'absolute', top: '1rem', left: 0, right: 0, textAlign: 'center', zIndex: 6 }}>
+                                <span style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', color: 'var(--text-main)', padding: '0.7rem 1.7rem', borderRadius: '50px', fontWeight: 800, fontSize: '0.95rem', boxShadow: '0 8px 20px rgba(0,0,0,0.15)', border: '1px solid var(--border-light)' }}>
                                     {guidance}
                                 </span>
                             </div>
