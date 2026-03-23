@@ -76,6 +76,18 @@ function Register() {
     const [guidance, setGuidance] = useState(null); // Real-time feedback overlay
     const [cameraError, setCameraError] = useState(false);
 
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+    // Calculate Eye Aspect Ratio
+    const calculateEAR = (eye) => {
+        const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const v1 = dist(eye[1], eye[5]);
+        const v2 = dist(eye[2], eye[4]);
+        const h = dist(eye[0], eye[3]);
+        if (h === 0) return 0;
+        return (v1 + v2) / (2.0 * h);
+    };
+
     // Bounding Box state removed, using Canvas Ref instead
 
     const videoRef = useRef();
@@ -109,7 +121,7 @@ function Register() {
                 // 2. Load face-api.js models from '/models'
                 setMsg({ type: 'info', text: "Loading AI models... Please wait." });
                 await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+                    isMobile ? faceapi.nets.tinyFaceDetector.loadFromUri('/models') : faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
                     faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
                     faceapi.nets.faceRecognitionNet.loadFromUri('/models')
                 ]);
@@ -123,7 +135,10 @@ function Register() {
         };
         loadResources();
         return () => {
-            if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
+            if (detectionFrameRef.current) {
+                if (isMobile) clearTimeout(detectionFrameRef.current);
+                else cancelAnimationFrame(detectionFrameRef.current);
+            }
             if (videoRef.current && videoRef.current.srcObject) {
                 videoRef.current.srcObject.getTracks().forEach(t => t.stop());
             }
@@ -150,11 +165,17 @@ function Register() {
 
     const detectLoop = async () => {
         if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) {
-            detectionFrameRef.current = requestAnimationFrame(detectLoop);
+            detectionFrameRef.current = isMobile 
+                ? setTimeout(detectLoop, 250) 
+                : requestAnimationFrame(detectLoop);
             return;
         }
 
-        const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+        const detectionOptions = isMobile 
+            ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }) 
+            : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+
+        const detection = await faceapi.detectSingleFace(videoRef.current, detectionOptions)
             .withFaceLandmarks()
             .withFaceDescriptor();
 
@@ -202,7 +223,24 @@ function Register() {
                     }
 
                     if (isCentered && isBigEnough && isConfident) {
-                        capturePhoto(detection.descriptor);
+                        if (isMobile) {
+                            const landmarks = detection.landmarks.positions;
+                            if (landmarks && landmarks.length >= 68) {
+                                const leftEye = landmarks.slice(36, 42);
+                                const rightEye = landmarks.slice(42, 48);
+                                const ear = (calculateEAR(leftEye) + calculateEAR(rightEye)) / 2.0;
+                                
+                                if (ear < 0.2) {
+                                    capturePhoto(detection.descriptor);
+                                } else {
+                                    if (stateRef.current.guidance !== "Action Required: Blink to capture") {
+                                        setGuidance("Action Required: Blink to capture");
+                                    }
+                                }
+                            }
+                        } else {
+                            capturePhoto(detection.descriptor);
+                        }
                     }
                 }
             } else {
@@ -215,7 +253,9 @@ function Register() {
             }
         }
 
-        detectionFrameRef.current = requestAnimationFrame(detectLoop);
+        detectionFrameRef.current = isMobile 
+            ? setTimeout(detectLoop, 250) 
+            : requestAnimationFrame(detectLoop);
     };
 
     const startEnrollment = () => {

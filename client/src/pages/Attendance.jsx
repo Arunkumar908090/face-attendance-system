@@ -13,6 +13,9 @@ function Attendance() {
     const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text: '', name: '' }
     const [cameraError, setCameraError] = useState(false);
 
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+
     const videoRef = useRef();
     const canvasRef = useRef(); // Bounding Box Overlay
     const detectionFrameRef = useRef(null);
@@ -56,7 +59,7 @@ function Attendance() {
                 // 2. Load Vision Model
                 setInitMsg("Loading AI models... Please wait.");
                 await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+                    isMobile ? faceapi.nets.tinyFaceDetector.loadFromUri('/models') : faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
                     faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
                     faceapi.nets.faceRecognitionNet.loadFromUri('/models')
                 ]);
@@ -70,7 +73,10 @@ function Attendance() {
         };
         setup();
         return () => {
-            if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current);
+            if (detectionFrameRef.current) {
+                if (isMobile) clearTimeout(detectionFrameRef.current);
+                else cancelAnimationFrame(detectionFrameRef.current);
+            }
             if (videoRef.current && videoRef.current.srcObject) {
                 videoRef.current.srcObject.getTracks().forEach(t => t.stop());
             }
@@ -139,12 +145,18 @@ function Attendance() {
     const detectLoop = async () => {
         if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || stateRef.current.status === 'EXPIRED') {
             if (stateRef.current.status !== 'EXPIRED') {
-                detectionFrameRef.current = requestAnimationFrame(detectLoop);
+                detectionFrameRef.current = isMobile 
+                    ? setTimeout(detectLoop, 250) 
+                    : requestAnimationFrame(detectLoop);
             }
             return;
         }
 
-        const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+        const detectionOptions = isMobile 
+            ? new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }) 
+            : new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+            
+        const detection = await faceapi.detectSingleFace(videoRef.current, detectionOptions)
             .withFaceLandmarks()
             .withFaceDescriptor();
 
@@ -221,7 +233,9 @@ function Attendance() {
             }
         }
 
-        detectionFrameRef.current = requestAnimationFrame(detectLoop);
+        detectionFrameRef.current = isMobile 
+            ? setTimeout(detectLoop, 250) 
+            : requestAnimationFrame(detectLoop);
     };
 
     const getChallengeText = (challenge) => {
