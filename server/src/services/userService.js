@@ -99,8 +99,10 @@ const getAllUsers = async (search, sort, page = 1, limit = 10) => {
 };
 
 const deleteUser = async (id) => {
-    // Perform Soft Delete
-    await pool.query('UPDATE users SET is_active = 0 WHERE id = $1', [id]);
+    // Perform Hard Delete to prevent overcrowding and allow zero-friction re-enrollment
+    await pool.query('DELETE FROM enrollments WHERE user_id = $1', [id]);
+    await pool.query('DELETE FROM attendance WHERE user_id = $1', [id]);
+    await pool.query('DELETE FROM users WHERE id = $1', [id]);
 };
 
 module.exports = {
