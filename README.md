@@ -25,7 +25,7 @@ The system processes biometrics securely to minimize server load:
 - **Strict Session Auto-Termination**: The backend database enforces strict time-based expirations natively. The `Active Session` API strictly checks `start_time + duration`. If expired, it automatically overrides `is_active` to `0` and throws `403 Forbidden` to any incoming biometric requests before they are parsed.
 - **JWT Authorization**: Admin panels and endpoints (`/api/admin`, `/api/classes`, `/api/sessions`, `/api/attendance`) are strictly protected via signed JSON Web Tokens (`Authorization: Bearer <token>`).
 - **Secure File Exports**: Attendance matrices (Class and Session level) are generated on the server as XLSX buffers. The frontend securely fetches these as `Blob` objects via JWT-authorized headers, rendering native local downloads.
-- **Optimized Image Storage**: User photos are compressed and structurally routed to `server/uploads/` rather than bloating the SQLite `.db` file via Base64. 
+- **Optimized Image Storage**: User photos are compressed and structurally routed to `server/uploads/` rather than bloating the PostgreSQL database via Base64. 
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ Before setting up the project, ensure you have the following installed on your s
 
 ### 1. Server (Backend)
 
-The backend handles all SQLite queries, JWT logic, and Euclidean Distance comparisons.
+The backend handles all PostgreSQL queries, JWT logic, and Euclidean Distance comparisons.
 
 1.  Navigate to the server directory:
     ```bash
@@ -69,11 +69,6 @@ The backend handles all SQLite queries, JWT logic, and Euclidean Distance compar
     ```bash
     npm run dev
     ```
-
-## Default Admin Login
-To access the `/admin` portal, use the default credentials defined in `server/.env`:
-- **Username**: `admin`
-- **Password**: `admin123`
 
 ## Troubleshooting
 
