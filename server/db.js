@@ -9,7 +9,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     matric_no TEXT,
-    level TEXT,
+    year TEXT,
     department TEXT,
     course TEXT,
     photo TEXT,
@@ -41,15 +41,15 @@ db.exec(`
 `);
 
 const registerUser = (user) => {
-  const { name, matric_no, level, department, course, photo, descriptor, section } = user;
-  const stmt = db.prepare('INSERT INTO users (name, matric_no, level, department, course, photo, descriptor, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-  const info = stmt.run(name, matric_no, level, department, course, photo, descriptor, section);
+  const { name, matric_no, year, department, course, photo, descriptor, section } = user;
+  const stmt = db.prepare('INSERT INTO users (name, matric_no, year, department, course, photo, descriptor, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const info = stmt.run(name, matric_no, year, department, course, photo, descriptor, section);
   return info.lastInsertRowid;
 };
 
 const getAllUsers = (search, sort) => {
   // Format created_at as ISO UTC string
-  let query = "SELECT id, name, matric_no, level, department, course, photo, descriptor, section, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) as created_at FROM users";
+  let query = "SELECT id, name, matric_no, year, department, course, photo, descriptor, section, strftime('%Y-%m-%dT%H:%M:%SZ', created_at) as created_at FROM users";
   const params = [];
 
   if (search) {
@@ -145,7 +145,7 @@ const checkDuplicate = (userId, sessionId, type) => {
 const getAttendanceLogs = (search) => {
   // Use strftime to format as ISO8601 with T separator and Z suffix so JS Date parses it as UTC
   let query = `
-    SELECT a.id, strftime('%Y-%m-%dT%H:%M:%SZ', a.timestamp) as timestamp, a.type, a.image, u.name, u.matric_no, u.level, u.department, s.name as session_name
+    SELECT a.id, strftime('%Y-%m-%dT%H:%M:%SZ', a.timestamp) as timestamp, a.type, a.image, u.name, u.matric_no, u.year, u.department, s.name as session_name
     FROM attendance a 
     JOIN users u ON a.user_id = u.id 
     LEFT JOIN sessions s ON a.session_id = s.id

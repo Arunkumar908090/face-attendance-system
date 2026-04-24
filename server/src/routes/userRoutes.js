@@ -39,7 +39,7 @@ router.post('/register', upload.any(), parseFormData, validate(registerSchema), 
     console.log(`[UserRoute] Found ${images.length} candidate images.`);
 
     // req.body contains text fields
-    const { name, matric_no, level, department, course, section, classIds, faceLandmarks } = req.body;
+    const { name, register_no, matric_no, year, department, course, section, classIds, faceLandmarks } = req.body;
     let { photo } = req.body;
 
     let descriptor = null;
@@ -62,7 +62,7 @@ router.post('/register', upload.any(), parseFormData, validate(registerSchema), 
 
     try {
         const result = await userService.registerUser({
-            name, matric_no, level, department, course,
+            name, register_no, matric_no, year, department, course,
             descriptor,
             section,
             classIds: classIds ? (Array.isArray(classIds) ? classIds : JSON.parse(classIds)) : [],

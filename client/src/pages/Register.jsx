@@ -56,13 +56,14 @@ const courseToDepartmentMap = {
 };
 
 function Register() {
-    const [formData, setFormData] = useState({
-        name: '',
-        matric_no: '',
-        level: '',
-        department: '',
-        course: ''
-    });
+   const [formData, setFormData] = useState({
+    name: '',
+    matric_no: '',      // Roll No
+    register_no: '',
+    year: '',
+    department: '',
+    course: ''
+});
     const [classes, setClasses] = useState([]);
     const [selectedClasses, setSelectedClasses] = useState([]);
 
@@ -300,8 +301,9 @@ function Register() {
         setStatus('SUBMITTING');
         const data = new FormData();
         data.append('name', formData.name);
+        data.append('register_no', formData.register_no);
         data.append('matric_no', formData.matric_no);
-        data.append('level', formData.level);
+        data.append('year', formData.year);
         data.append('department', formData.department);
         data.append('course', formData.course);
         data.append('classIds', JSON.stringify(selectedClasses));
@@ -341,7 +343,7 @@ function Register() {
             if (res.success) {
                 setStatus('SUCCESS');
                 setMsg({ type: 'success', text: "Enrollment Successful!" });
-                setFormData({ name: '', matric_no: '', level: '', department: '', course: '' });
+                setFormData({ name: '', register_no: '', matric_no: '', year: '', department: '', course: '' });
                 setSelectedClasses([]);
                 setCaptures([]);
                 setFaceLandmarksPayload(null);
@@ -395,21 +397,21 @@ function Register() {
 
                     <div style={{ display: 'grid', gap: '1rem' }}>
                         <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} disabled={status !== 'IDLE'} />
+                        <input name="register_no" placeholder="Register No" value={formData.register_no} onChange={handleChange} disabled={status !== 'IDLE'} />
                         <input name="matric_no" placeholder="Matric No" value={formData.matric_no} onChange={handleChange} disabled={status !== 'IDLE'} />
                         <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '1rem' }}>
-                            <select name="level" value={formData.level} onChange={handleChange} disabled={status !== 'IDLE'} style={{ background: 'var(--bg-main)', padding: '1rem 0.5rem' }}>
-                                <option value="">Level</option>
-                                <option value="100">100</option>
-                                <option value="200">200</option>
-                                <option value="300">300</option>
-                                <option value="400">400</option>
-                                <option value="500">500</option>
-                                <option value="600">600</option>
+                            <select name="year" value={formData.year} onChange={handleChange} disabled={status !== 'IDLE'} style={{ background: 'var(--bg-main)', padding: '1rem 0.5rem' }}>
+                                <option value="">Year</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                
                             </select>
-                            <input name="department" placeholder="Department (Auto-filled)" value={formData.department} disabled={true} style={{ background: '#f1f5f9', color: '#64748b' }} />
+                            <input name="course" placeholder="Course Name" value={formData.course} onChange={handleChange}  disabled={status !== 'IDLE'}  />
                         </div>
-                        <select name="course" value={formData.course} onChange={handleChange} disabled={status !== 'IDLE'} style={{ background: 'var(--bg-main)' }}>
-                            <option value="">Select a Course</option>
+                        <select name="department" value={formData.department} onChange={handleChange} disabled={status !== 'IDLE'} style={{ background: 'var(--bg-main)' }}>
+                            <option value="">Choose your Department</option>
                             {Object.keys(courseToDepartmentMap).map(c => (
                                 <option key={c} value={c}>{c}</option>
                             ))}
@@ -515,3 +517,4 @@ function Register() {
 }
 
 export default Register;
+
